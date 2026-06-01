@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+/*
+  Verdify design tokens. Professional, compliance-grade SaaS palette.
+  Brand = verdant green (trust + "go" / compliant). Status colors are
+  load-bearing: they encode compliance state on every tile and timer.
+*/
+:root {
+  --background: #f7f8f7;
+  --foreground: #0f1a14;
+
+  --card: #ffffff;
+  --card-foreground: #0f1a14;
+
+  --muted: #eef1ee;
+  --muted-foreground: #5c6b62;
+
+  --border: #e2e7e3;
+  --input: #e2e7e3;
+  --ring: #16855a;
+
+  /* Brand */
+  --primary: #16855a;
+  --primary-foreground: #ffffff;
+  --primary-muted: #e7f4ee;
+
+  /* Compliance status */
+  --status-ok: #16855a;
+  --status-ok-bg: #e7f4ee;
+  --status-warn: #b9770a;
+  --status-warn-bg: #fdf3e3;
+  --status-danger: #c1362c;
+  --status-danger-bg: #fbeae8;
+
+  --radius: 0.7rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-muted: var(--primary-muted);
+  --color-status-ok: var(--status-ok);
+  --color-status-ok-bg: var(--status-ok-bg);
+  --color-status-warn: var(--status-warn);
+  --color-status-warn-bg: var(--status-warn-bg);
+  --color-status-danger: var(--status-danger);
+  --color-status-danger-bg: var(--status-danger-bg);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 0.2rem);
+  --radius-sm: calc(var(--radius) - 0.35rem);
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tabular numerals for the live fine counters so digits don't jump. */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
