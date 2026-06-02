@@ -19,6 +19,15 @@ export interface BuildingLookupResult {
     energyStarScore?: number;
     siteEui?: number;
     programYear?: string;
+    /** Map coordinates for the locate animation (demo fixtures only). */
+    lat?: number;
+    lng?: number;
+    /** Whether the building sits inside Verdify's serviceable area (City of LA / LADWP). */
+    serviceable?: boolean;
+    /** Neighborhood or city the building sits in (e.g. "Downtown LA", "Santa Monica"). */
+    jurisdiction?: string;
+    /** Electric/water utility serving the building (e.g. "LADWP", "Glendale Water & Power"). */
+    utility?: string;
   };
 }
 

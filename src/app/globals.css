@@ -78,3 +78,21 @@ body {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
+
+/* Expanding ring behind the map pin during the "locating" animation. */
+@keyframes verdify-pin-pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.4);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.4);
+    opacity: 0;
+  }
+}
+
+/* Leaflet divIcon has a default white background/border — strip it. */
+.verdify-pin {
+  background: transparent;
+  border: 0;
+}

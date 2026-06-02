@@ -69,15 +69,24 @@ async function main() {
   ok("Simulator renders Table A3", (await page.locator("text=Day 365").count()) > 0);
   await page.screenshot({ path: `${SHOTS}/04-simulator.png`, fullPage: true });
 
-  // ── Onboarding lookup (real BIN) ──
+  // ── Onboarding lookup (first lookup = serviceable: locate → connect → prefill) ──
   await page.goto(`${BASE}/buildings/new`);
   await page.fill("#bin", "476102819647");
   await page.click("text=Look up");
-  await page.waitForSelector("text=Matched in LA Open Data", { timeout: 15000 });
+  // Locate (~1.4s) then the LADBS/LADWP/EPA cascade (~3.3s) before prefill.
+  await page.waitForSelector("text=fields pre-filled", { timeout: 20000 });
   const sqftVal = await page.inputValue("#sqft");
-  ok("Onboarding prefilled sqft from LA Open Data", Number(sqftVal) > 0, `sqft=${sqftVal}`);
+  ok("Onboarding prefilled sqft for serviceable building", Number(sqftVal) > 0, `sqft=${sqftVal}`);
   ok("Onboarding shows derived schedule", (await page.locator("text=A/RCx cycle").count()) > 0);
   await page.screenshot({ path: `${SHOTS}/05-onboarding.png`, fullPage: true });
+
+  // ── Second lookup = outside serviceable area: blocked + explained ──
+  await page.fill("#bin", "999000111222");
+  await page.click("text=Look up");
+  await page.waitForSelector("text=Verdify can't add this building", { timeout: 20000 });
+  const addDisabled = await page.locator('button:has-text("Add to portfolio")').isDisabled();
+  ok("Out-of-area building blocks Add to portfolio", addDisabled);
+  await page.screenshot({ path: `${SHOTS}/05b-onboarding-out-of-area.png`, fullPage: true });
 
   // ── Consultant: org switcher across client orgs ──
   await context.clearCookies();

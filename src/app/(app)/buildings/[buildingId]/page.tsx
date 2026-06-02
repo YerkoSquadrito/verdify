@@ -10,7 +10,9 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Countdown } from "@/components/shared/Countdown";
 import { FineExposureCounter } from "@/components/portfolio/FineExposureCounter";
 import { VaultSection } from "@/components/vault/VaultSection";
+import { BuildingMapLazy } from "@/components/map/BuildingMapLazy";
 import { Card, CardContent } from "@/components/ui/card";
+import { resolveCoords } from "@/lib/data-sources/geo";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +59,9 @@ export default async function BuildingDetailPage({
   const events = (evRows ?? []) as ComplianceEvent[];
   const documents = (docRows ?? []) as DocumentRow[];
   const view = buildView(building, events);
+  // Buildings are persisted without coordinates; resolve them for the map.
+  // Every saved building is serviceable (onboarding blocks out-of-area ones).
+  const coords = resolveCoords(building.address, building.bin);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-6 lg:p-8">
@@ -80,6 +85,17 @@ export default async function BuildingDetailPage({
           {building.address}
         </p>
       )}
+
+      {/* Location */}
+      <Card>
+        <CardContent className="space-y-3 pt-6">
+          <BuildingMapLazy lat={coords.lat} lng={coords.lng} serviceable />
+          <p className="flex items-center gap-1.5 text-xs text-status-ok">
+            <MapPin className="h-3.5 w-3.5" />
+            Within the City of Los Angeles · LADWP service territory · EBEWE-covered
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Schedule + fine */}
       <div className="grid gap-4 md:grid-cols-3">
