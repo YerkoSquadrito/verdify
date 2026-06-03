@@ -11,7 +11,13 @@ const DEADLINE_LABEL: Record<string, string> = {
   arcx: "A/RCx audit (Dec 1)",
 };
 
-export function BuildingTile({ view }: { view: BuildingView }) {
+export function BuildingTile({
+  view,
+  offsetMs = 0,
+}: {
+  view: BuildingView;
+  offsetMs?: number;
+}) {
   const { building, schedule, nextDeadline, violationDate } = view;
   return (
     <Link
@@ -59,7 +65,11 @@ export function BuildingTile({ view }: { view: BuildingView }) {
           </span>
         </div>
         <div className="mt-1">
-          <Countdown dueDateISO={nextDeadline.dueDate.toISOString()} className="text-sm" />
+          <Countdown
+            dueDateISO={nextDeadline.dueDate.toISOString()}
+            offsetMs={offsetMs}
+            className="text-sm"
+          />
         </div>
       </div>
 
@@ -69,6 +79,9 @@ export function BuildingTile({ view }: { view: BuildingView }) {
           <FineExposureCounter
             violationDateISO={violationDate ? violationDate.toISOString() : null}
             size="sm"
+            settled={view.fine.settled}
+            settledAmount={view.fine.settledAmount}
+            offsetMs={offsetMs}
           />
         </div>
       </div>

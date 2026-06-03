@@ -31,13 +31,24 @@ export interface FineEscalation {
 }
 
 export interface FineExposure {
-  /** Current exact dollar exposure per the ordinance (a step function). */
+  /**
+   * Exposure still at risk per the ordinance (a step function). Zero once the
+   * fine has been settled — a paid fine is no longer money at risk.
+   */
   balance: number;
   daysElapsed: number;
   stage: FineStage;
   asOf: Date;
   /** The next escalation event, or null once fully escalated context is irrelevant. */
   nextEscalation: FineEscalation | null;
+  /**
+   * The fine has been paid (§98.0411(c) balance settled). Paying settles the
+   * MONEY axis only — it does NOT cure the underlying non-compliance, which is
+   * resolved separately by submitting documentation. Independent of `status`.
+   */
+  settled?: boolean;
+  /** The frozen balance that was settled, for display once `settled` is true. */
+  settledAmount?: number;
 }
 
 export interface FineScheduleRow {

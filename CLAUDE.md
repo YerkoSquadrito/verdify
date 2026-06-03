@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Verdify is an **ordinance-native compliance platform** for Los Angeles' Existing Buildings Energy & Water Efficiency (EBEWE) Ordinance. It collapses a workflow today fragmented across **LADBS**, **LADWP**, and **EPA ENERGY STAR Portfolio Manager** into one integrated environment for building owners, property managers, and energy consultants.
 
-The single source of product truth is `Context/Verdify - Product description.docx`. Read it before making product-shape decisions. The prototype scope below is a faithful restatement; if it ever conflicts with the docx, the docx wins.
+The single source of product truth is `Context/Verdify - Product description.docx`. **Always read it at the start of a session, before any non-trivial work — not only for product-shape decisions** — so you carry the fullest understanding of the product. Use the extraction one-liner in the "Working With This Repo" section to read it cleanly. The prototype scope below is a faithful restatement; if it ever conflicts with the docx, the docx wins.
 
 ## Status
 

@@ -20,10 +20,17 @@ export function PortfolioSummary({
   violationDatesISO,
   counts,
   buildingCount,
+  selected,
+  onSelect,
+  offsetMs = 0,
 }: {
   violationDatesISO: string[];
   counts: Record<BuildingStatus, number>;
   buildingCount: number;
+  selected: BuildingStatus | null;
+  onSelect: (status: BuildingStatus) => void;
+  /** Demo-clock shift forward in ms (0 = real time). */
+  offsetMs?: number;
 }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -32,7 +39,7 @@ export function PortfolioSummary({
     return () => clearInterval(id);
   }, [violationDatesISO.length]);
 
-  const asOf = new Date(now);
+  const asOf = new Date(now + offsetMs);
   const total = violationDatesISO.reduce(
     (sum, iso) => sum + computeFineExposure(new Date(iso), asOf).balance,
     0,
@@ -53,19 +60,34 @@ export function PortfolioSummary({
         </p>
       </div>
 
-      {CARDS.map((c) => (
-        <div key={c.key} className="rounded-lg border border-border bg-card p-5">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {c.label}
-          </p>
-          <p className={`mt-2 text-3xl font-semibold tabular-nums ${c.tone}`}>
-            {counts[c.key]}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {counts[c.key] === 1 ? "building" : "buildings"}
-          </p>
-        </div>
-      ))}
+      {CARDS.map((c) => {
+        const active = selected === c.key;
+        return (
+          <button
+            key={c.key}
+            type="button"
+            onClick={() => onSelect(c.key)}
+            aria-pressed={active}
+            className={`cursor-pointer rounded-lg border bg-card p-5 text-left transition-colors hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+              active ? "border-primary ring-2 ring-primary" : "border-border"
+            }`}
+          >
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {c.label}
+            </p>
+            <p className={`mt-2 text-3xl font-semibold tabular-nums ${c.tone}`}>
+              {counts[c.key]}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {active
+                ? "Filtering · click to clear"
+                : counts[c.key] === 1
+                  ? "building"
+                  : "buildings"}
+            </p>
+          </button>
+        );
+      })}
     </div>
   );
 }

@@ -11,7 +11,8 @@ export type DataSource = "socrata" | "manual";
 export type ComplianceEventType =
   | "benchmark_submitted"
   | "arcx_completed"
-  | "violation_issued";
+  | "violation_issued"
+  | "fine_paid";
 export type DocumentType =
   | "benchmark_submission"
   | "arcx_report"
