@@ -2,20 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Building2,
-  Clock,
-  Calculator,
-  Sparkles,
-} from "lucide-react";
+import { LayoutDashboard, Building2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
   { href: "/dashboard", label: "Portfolio", icon: LayoutDashboard },
   { href: "/buildings/new", label: "Add building", icon: Building2 },
-  { href: "/deadlines", label: "Deadlines", icon: Clock },
-  { href: "/simulator", label: "Alert simulator", icon: Calculator },
   { href: "/assistant", label: "Assistant", icon: Sparkles },
 ];
 
