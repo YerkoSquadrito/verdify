@@ -3,6 +3,8 @@ import {
   computeFineExposure,
   deriveComplianceSchedule,
   upcomingDeadlines,
+  nextBenchmarkDeadline,
+  nextArcxDueDate,
   civilDate,
   addDays,
   ARCX_CYCLE_YEARS,
@@ -20,6 +22,13 @@ export interface BuildingView {
   violationDate: Date | null;
   fine: FineExposure;
   status: BuildingStatus;
+  /**
+   * True only when the violation is an explicit, issued LADBS notice (payable on
+   * the money axis). False when the "violation" is derived from a deadline that
+   * lapsed unmet during the demo — that is cured by submitting documentation, not
+   * by paying a notice that was never issued.
+   */
+  violationIssued: boolean;
   deadlines: UpcomingDeadline[];
   nextDeadline: UpcomingDeadline;
   events: ComplianceEvent[];
@@ -40,6 +49,7 @@ export function buildView(
   building: Building,
   events: ComplianceEvent[],
   asOf: Date = new Date(),
+  baseline: Date = asOf,
 ): BuildingView {
   const schedule = deriveComplianceSchedule(
     building.bin,
@@ -110,56 +120,115 @@ export function buildView(
     effectiveFine = computeFineExposure(violationDate, asOf);
   }
 
-  // Roll a deadline forward when the current cycle has already been satisfied,
-  // so a building that benchmarked this year reads as compliant rather than
-  // perpetually "approaching" its upcoming-but-met deadline.
-  const benchmarkSatisfied = events.some(
-    (e) =>
-      e.event_type === "benchmark_submitted" &&
-      parseDate(e.event_date).getTime() >
-        addDays(schedule.nextBenchmarkDeadline, -365).getTime(),
+  // Resolve each deadline axis against the cycle currently in force, keyed to the
+  // `baseline` (real "now" at demo offset 0) so a deadline is only treated as
+  // MISSED when it lapses inside the simulated window [baseline, asOf]. With the
+  // default baseline === asOf that window is empty, so non-demo callers never
+  // INFER a violation from merely-absent records — only an explicit
+  // `violation_issued` event creates a fine (LAMC §91.9712). Demo callers pass an
+  // earlier baseline to let the time-travel slider drive lapses.
+  const bench = resolveDeadlineAxis(
+    nextBenchmarkDeadline(baseline),
+    1,
+    events.some(
+      (e) =>
+        e.event_type === "benchmark_submitted" &&
+        parseDate(e.event_date).getTime() >
+          addDays(nextBenchmarkDeadline(baseline), -365).getTime(),
+    ),
+    asOf,
   );
-  const arcxSatisfied = events.some(
-    (e) =>
-      e.event_type === "arcx_completed" &&
-      parseDate(e.event_date).getTime() >
-        addDays(schedule.nextArcxDueDate, -365 * ARCX_CYCLE_YEARS).getTime(),
+  const arcx = resolveDeadlineAxis(
+    nextArcxDueDate(building.bin, baseline),
+    ARCX_CYCLE_YEARS,
+    events.some(
+      (e) =>
+        e.event_type === "arcx_completed" &&
+        parseDate(e.event_date).getTime() >
+          addDays(nextArcxDueDate(building.bin, baseline), -365 * ARCX_CYCLE_YEARS).getTime(),
+    ),
+    asOf,
   );
   const effectiveSchedule: ComplianceSchedule = {
     ...schedule,
-    nextBenchmarkDeadline: benchmarkSatisfied
-      ? civilDate(schedule.nextBenchmarkDeadline.getUTCFullYear() + 1, 6, 1)
-      : schedule.nextBenchmarkDeadline,
-    nextArcxDueDate: arcxSatisfied
-      ? civilDate(
-          schedule.nextArcxDueDate.getUTCFullYear() + ARCX_CYCLE_YEARS,
-          12,
-          1,
-        )
-      : schedule.nextArcxDueDate,
+    nextBenchmarkDeadline: bench.effectiveDate,
+    nextArcxDueDate: arcx.effectiveDate,
   };
 
   const deadlines = upcomingDeadlines(effectiveSchedule, asOf);
   const nextDeadline = deadlines[0];
 
-  // Status follows the COMPLIANCE axis only. A settled-but-uncured violation
-  // still reads "violation"; a cured-but-unpaid one reads compliant/approaching
-  // while its fine keeps accruing on the money axis.
+  // The earliest deadline that lapsed unmet during the simulated window. Its date
+  // is the §91.9712 base-notice anchor for the derived fine — i.e. exposure
+  // begins the day the ordinance deadline passed.
+  const missedAnchor = [bench.missedDate, arcx.missedDate]
+    .filter((d): d is Date => d != null)
+    .sort((a, b) => a.getTime() - b.getTime())[0];
+
+  // Status follows the COMPLIANCE axis. An explicit open violation dominates (an
+  // authoritative LADBS notice). Otherwise a deadline that lapsed unmet reads
+  // "violation" with a fine accruing from the missed date; a cured-but-unpaid
+  // explicit violation reads compliant/approaching while its fine keeps accruing.
   let status: BuildingStatus = "compliant";
-  if (openViolation) status = "violation";
-  else if (deadlines.some((d) => d.thresholdCrossed !== null))
+  let resolvedViolationDate = violationDate;
+  let resolvedFine = effectiveFine;
+  if (openViolation) {
+    status = "violation";
+  } else if (missedAnchor) {
+    status = "violation";
+    resolvedViolationDate = missedAnchor;
+    resolvedFine = computeFineExposure(missedAnchor, asOf);
+  } else if (deadlines.some((d) => d.thresholdCrossed !== null)) {
     status = "approaching";
+  }
 
   return {
     building,
     schedule: effectiveSchedule,
-    violationDate,
-    fine: effectiveFine,
+    violationDate: resolvedViolationDate,
+    fine: resolvedFine,
     status,
+    violationIssued: openViolation,
     deadlines,
     nextDeadline,
     events,
   };
+}
+
+interface AxisResolution {
+  /** Deadline to display — the now-overdue date when missed, else the upcoming one. */
+  effectiveDate: Date;
+  /** Non-null when the deadline lapsed unmet during the simulated window. */
+  missedDate: Date | null;
+}
+
+/**
+ * Resolve one deadline axis (benchmark or A/RCx) to the cycle in force.
+ *  • satisfied this cycle → advance one cycle so a met deadline doesn't read
+ *    "approaching" forever;
+ *  • unmet and already past `asOf` → MISSED: keep the lapsed date (shown overdue);
+ *  • otherwise → the upcoming deadline.
+ */
+function resolveDeadlineAxis(
+  dueDate: Date,
+  cycleYears: number,
+  satisfied: boolean,
+  asOf: Date,
+): AxisResolution {
+  if (satisfied) {
+    return {
+      effectiveDate: civilDate(
+        dueDate.getUTCFullYear() + cycleYears,
+        dueDate.getUTCMonth() + 1,
+        dueDate.getUTCDate(),
+      ),
+      missedDate: null,
+    };
+  }
+  if (asOf.getTime() >= dueDate.getTime()) {
+    return { effectiveDate: dueDate, missedDate: dueDate };
+  }
+  return { effectiveDate: dueDate, missedDate: null };
 }
 
 /**
@@ -171,6 +240,7 @@ export async function getPortfolio(
   supabase: SupabaseClient,
   orgId: string,
   asOf: Date = new Date(),
+  baseline: Date = asOf,
 ): Promise<PortfolioView> {
   const [{ data: buildingRows }, { data: eventRows }] = await Promise.all([
     supabase
@@ -191,7 +261,7 @@ export async function getPortfolio(
   }
 
   const views = buildings.map((b) =>
-    buildView(b, eventsByBuilding.get(b.id) ?? [], asOf),
+    buildView(b, eventsByBuilding.get(b.id) ?? [], asOf, baseline),
   );
 
   const counts: Record<BuildingStatus, number> = {

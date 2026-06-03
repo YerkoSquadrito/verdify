@@ -90,7 +90,11 @@ export function PortfolioBoard({
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {visible.map((view) => (
-                <BuildingTile key={view.building.id} view={view} />
+                <BuildingTile
+                  key={view.building.id}
+                  view={view}
+                  offsetMs={offsetMs}
+                />
               ))}
             </div>
           )}

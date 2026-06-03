@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { buildView } from "../portfolio";
 import type { Building, ComplianceEvent, ComplianceEventType } from "../types";
-import { FINE_AT_DAY_30 } from "@/lib/compliance";
+import { FINE_AT_DAY_30, FINE_BASE } from "@/lib/compliance";
 
 // Fixed reference moment so the fine stage is deterministic. The violation
 // below is dated 2026-01-01, ~104 days before asOf → interest stage.
@@ -112,5 +112,52 @@ describe("buildView — two independent resolution axes", () => {
     expect(view.status).not.toBe("violation");
     expect(view.fine.balance).toBe(0);
     expect(view.fine.settled).toBeFalsy();
+  });
+});
+
+describe("buildView — missed deadlines inside the simulated window", () => {
+  // A benchmarking deadline (June 1) that lapses unmet between `baseline` and
+  // `asOf` must read as a violation with a fine accruing from the deadline date.
+  const BEFORE_JUN1 = new Date("2026-05-01T12:00:00.000Z"); // demo baseline
+  const PLUS_14D = new Date("2026-06-15T12:00:00.000Z"); // 14 days past June 1
+  const PLUS_35D = new Date("2026-07-06T12:00:00.000Z"); // 35 days past June 1
+
+  it("clean building, deadline lapsed unmet → in violation at the $202 base", () => {
+    const view = buildView(building, [], PLUS_14D, BEFORE_JUN1);
+
+    expect(view.status).toBe("violation");
+    // Derived from a missed deadline, not an issued LADBS notice → not payable.
+    expect(view.violationIssued).toBe(false);
+    expect(view.fine.balance).toBe(FINE_BASE);
+    // The lapsed benchmark deadline is shown as overdue (sorted first).
+    expect(view.nextDeadline.type).toBe("benchmark");
+    expect(view.nextDeadline.daysUntil).toBeLessThan(0);
+  });
+
+  it("a submission for that cycle satisfies the deadline → stays compliant", () => {
+    const view = buildView(
+      building,
+      [ev("benchmark_submitted", "2026-05-20")],
+      PLUS_14D,
+      BEFORE_JUN1,
+    );
+
+    expect(view.status).not.toBe("violation");
+    expect(view.fine.balance).toBe(0);
+  });
+
+  it("35 days past the missed deadline → fine steps to the $707 late charge", () => {
+    const view = buildView(building, [], PLUS_35D, BEFORE_JUN1);
+
+    expect(view.status).toBe("violation");
+    expect(view.fine.balance).toBe(FINE_AT_DAY_30);
+  });
+
+  it("production safety: no baseline (baseline === asOf) never infers a violation", () => {
+    // Same clean building, same moment past June 1, but no simulated window.
+    const view = buildView(building, [], PLUS_14D);
+
+    expect(view.status).not.toBe("violation");
+    expect(view.fine.balance).toBe(0);
   });
 });

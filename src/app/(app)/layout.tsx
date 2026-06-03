@@ -17,7 +17,7 @@ export default async function AppLayout({
   const demoOffset = demo ? await getDemoOffsetDays() : 0;
 
   return (
-    <div className="flex min-h-screen flex-1">
+    <div className="flex h-screen flex-1 overflow-hidden">
       <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-card">
         <div className="flex items-center gap-2 px-5 py-4">
           <ShieldCheck className="h-6 w-6 text-primary" />
@@ -31,15 +31,14 @@ export default async function AppLayout({
           />
         </div>
 
-        <div className="mt-4 flex-1 px-3">
+        <div className="mt-4 flex-1 overflow-y-auto min-h-0 px-3">
           <NavLinks />
+          {demo && (
+            <div className="mt-4 border-t border-border pt-4">
+              <DemoControls initialOffsetDays={demoOffset} />
+            </div>
+          )}
         </div>
-
-        {demo && (
-          <div className="px-3 pb-1">
-            <DemoControls initialOffsetDays={demoOffset} />
-          </div>
-        )}
 
         <div className="border-t border-border p-3">
           <div className="px-2 pb-2">

@@ -27,8 +27,10 @@ export default async function DeadlinesPage() {
   const supabase = await createClient();
   const asOf = await getDemoNow();
   const offsetMs = await getDemoOffsetMs();
+  // Real "now" at demo offset 0 — see getPortfolio/buildView baseline rationale.
+  const baseline = new Date(asOf.getTime() - offsetMs);
   const [portfolio, { data: alertRows }] = await Promise.all([
-    getPortfolio(supabase, ctx.activeOrg.id, asOf),
+    getPortfolio(supabase, ctx.activeOrg.id, asOf, baseline),
     supabase
       .from("alerts")
       .select("*")

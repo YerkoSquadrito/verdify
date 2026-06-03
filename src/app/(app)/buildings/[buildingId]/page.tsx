@@ -63,7 +63,9 @@ export default async function BuildingDetailPage({
   const documents = (docRows ?? []) as DocumentRow[];
   const asOf = await getDemoNow();
   const offsetMs = await getDemoOffsetMs();
-  const view = buildView(building, events, asOf);
+  // Real "now" at demo offset 0 — see getPortfolio/buildView baseline rationale.
+  const baseline = new Date(asOf.getTime() - offsetMs);
+  const view = buildView(building, events, asOf, baseline);
   // Buildings are persisted without coordinates; resolve them for the map.
   // Every saved building is serviceable (onboarding blocks out-of-area ones).
   const coords = resolveCoords(building.address, building.bin);
@@ -156,7 +158,12 @@ export default async function BuildingDetailPage({
                 Fine settled · documentation still pending
               </p>
             )}
-            {view.violationDate && !view.fine.settled && (
+            {view.status === "violation" && !view.violationIssued && (
+              <p className="mt-2 text-xs font-medium text-status-danger">
+                Compliance deadline lapsed — submit documentation below to cure.
+              </p>
+            )}
+            {view.violationDate && !view.fine.settled && view.violationIssued && (
               <PayFineButton buildingId={building.id} />
             )}
             <dl className="mt-4 space-y-1.5 text-xs text-muted-foreground">

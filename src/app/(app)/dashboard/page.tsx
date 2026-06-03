@@ -15,7 +15,10 @@ export default async function DashboardPage() {
   const supabase = await createClient();
   const asOf = await getDemoNow();
   const offsetMs = await getDemoOffsetMs();
-  const portfolio = await getPortfolio(supabase, ctx.activeOrg.id, asOf);
+  // Real "now" at demo offset 0 — deadlines lapsing inside [baseline, asOf] (the
+  // simulated window) read as missed; outside the demo, baseline === asOf.
+  const baseline = new Date(asOf.getTime() - offsetMs);
+  const portfolio = await getPortfolio(supabase, ctx.activeOrg.id, asOf, baseline);
 
   const violationDatesISO = portfolio.buildings
     .filter((b) => b.violationDate)
