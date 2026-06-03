@@ -48,15 +48,67 @@ export function buildView(
     asOf,
   );
 
+  // The most recent violation notice. Its date drives the fine counter and,
+  // unless cured, the building's "in violation" status.
   const violations = events
     .filter((e) => e.event_type === "violation_issued")
     .sort((a, b) => b.event_date.localeCompare(a.event_date));
   const violationDate = violations[0] ? parseDate(violations[0].event_date) : null;
 
-  const fine = computeFineExposure(violationDate ?? asOf, asOf);
-  const effectiveFine: FineExposure = violationDate
-    ? fine
-    : { ...fine, balance: 0, stage: "none", nextEscalation: null };
+  // Two INDEPENDENT resolution axes (LA EBEWE / LAMC enforcement model):
+  //
+  //   • Compliance (cure) axis — a benchmarking/A/RCx submission dated on or
+  //     after the violation cures the non-compliance and clears "violation"
+  //     status. It does NOT waive an unpaid fine.
+  //   • Money axis — a 'fine_paid' event dated on or after the violation
+  //     settles the §98.0411(c) balance. It does NOT restore compliance.
+  //
+  // Full clearance requires both; either can happen first, in any order.
+  const violationCured =
+    violationDate != null &&
+    events.some(
+      (e) =>
+        (e.event_type === "benchmark_submitted" ||
+          e.event_type === "arcx_completed") &&
+        parseDate(e.event_date).getTime() >= violationDate.getTime(),
+    );
+  const openViolation = violationDate != null && !violationCured;
+
+  const finePayment =
+    violationDate != null
+      ? events
+          .filter(
+            (e) =>
+              e.event_type === "fine_paid" &&
+              parseDate(e.event_date).getTime() >= violationDate.getTime(),
+          )
+          .sort((a, b) => a.event_date.localeCompare(b.event_date))[0]
+      : undefined;
+
+  let effectiveFine: FineExposure;
+  if (violationDate == null) {
+    const zero = computeFineExposure(asOf, asOf);
+    effectiveFine = { ...zero, balance: 0, stage: "none", nextEscalation: null };
+  } else if (finePayment) {
+    // Freeze the exposure at the balance owed on the payment date, then mark it
+    // settled: a paid fine is no longer money at risk (balance 0), so it drops
+    // out of the portfolio's total fine exposure while still displaying what
+    // was settled.
+    const settledExposure = computeFineExposure(
+      violationDate,
+      parseDate(finePayment.event_date),
+    );
+    effectiveFine = {
+      ...settledExposure,
+      asOf,
+      balance: 0,
+      nextEscalation: null,
+      settled: true,
+      settledAmount: settledExposure.balance,
+    };
+  } else {
+    effectiveFine = computeFineExposure(violationDate, asOf);
+  }
 
   // Roll a deadline forward when the current cycle has already been satisfied,
   // so a building that benchmarked this year reads as compliant rather than
@@ -90,8 +142,11 @@ export function buildView(
   const deadlines = upcomingDeadlines(effectiveSchedule, asOf);
   const nextDeadline = deadlines[0];
 
+  // Status follows the COMPLIANCE axis only. A settled-but-uncured violation
+  // still reads "violation"; a cured-but-unpaid one reads compliant/approaching
+  // while its fine keeps accruing on the money axis.
   let status: BuildingStatus = "compliant";
-  if (violationDate) status = "violation";
+  if (openViolation) status = "violation";
   else if (deadlines.some((d) => d.thresholdCrossed !== null))
     status = "approaching";
 

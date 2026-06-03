@@ -1,7 +1,10 @@
 import { ShieldCheck, LogOut } from "lucide-react";
 import { getSessionContext } from "@/lib/auth/session";
+import { isDemoMode } from "@/lib/demo/clock";
+import { getDemoOffsetDays } from "@/lib/demo/clock-server";
 import { OrgSwitcher } from "@/components/shell/OrgSwitcher";
 import { NavLinks } from "@/components/shell/NavLinks";
+import { DemoControls } from "@/components/demo/DemoControls";
 import { signOut } from "./actions";
 
 export default async function AppLayout({
@@ -10,6 +13,8 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const ctx = await getSessionContext();
+  const demo = isDemoMode();
+  const demoOffset = demo ? await getDemoOffsetDays() : 0;
 
   return (
     <div className="flex min-h-screen flex-1">
@@ -29,6 +34,12 @@ export default async function AppLayout({
         <div className="mt-4 flex-1 px-3">
           <NavLinks />
         </div>
+
+        {demo && (
+          <div className="px-3 pb-1">
+            <DemoControls initialOffsetDays={demoOffset} />
+          </div>
+        )}
 
         <div className="border-t border-border p-3">
           <div className="px-2 pb-2">

@@ -4,11 +4,14 @@ import { ArrowLeft, MapPin, CalendarClock, FolderLock, History } from "lucide-re
 import { getSessionContext } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { buildView } from "@/lib/db/portfolio";
+import { getDemoNow, getDemoOffsetMs } from "@/lib/demo/clock-server";
 import type { Building, ComplianceEvent, DocumentRow } from "@/lib/db/types";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Countdown } from "@/components/shared/Countdown";
 import { FineExposureCounter } from "@/components/portfolio/FineExposureCounter";
+import { PayFineButton } from "@/components/portfolio/PayFineButton";
+import { SubmitComplianceForm } from "@/components/compliance/SubmitComplianceForm";
 import { VaultSection } from "@/components/vault/VaultSection";
 import { BuildingMapLazy } from "@/components/map/BuildingMapLazy";
 import { Card, CardContent } from "@/components/ui/card";
@@ -58,7 +61,9 @@ export default async function BuildingDetailPage({
   ]);
   const events = (evRows ?? []) as ComplianceEvent[];
   const documents = (docRows ?? []) as DocumentRow[];
-  const view = buildView(building, events);
+  const asOf = await getDemoNow();
+  const offsetMs = await getDemoOffsetMs();
+  const view = buildView(building, events, asOf);
   // Buildings are persisted without coordinates; resolve them for the map.
   // Every saved building is serviceable (onboarding blocks out-of-area ones).
   const coords = resolveCoords(building.address, building.bin);
@@ -122,7 +127,7 @@ export default async function BuildingDetailPage({
                         ` · cycle keyed to BIN digit ${view.schedule.arcxDigit}`}
                     </p>
                   </div>
-                  <Countdown dueDateISO={d.dueDate.toISOString()} />
+                  <Countdown dueDateISO={d.dueDate.toISOString()} offsetMs={offsetMs} />
                 </div>
               ))}
             </div>
@@ -141,8 +146,19 @@ export default async function BuildingDetailPage({
                   view.violationDate ? view.violationDate.toISOString() : null
                 }
                 size="lg"
+                settled={view.fine.settled}
+                settledAmount={view.fine.settledAmount}
+                offsetMs={offsetMs}
               />
             </div>
+            {view.fine.settled && view.status === "violation" && (
+              <p className="mt-2 text-xs font-medium text-status-warn">
+                Fine settled · documentation still pending
+              </p>
+            )}
+            {view.violationDate && !view.fine.settled && (
+              <PayFineButton buildingId={building.id} />
+            )}
             <dl className="mt-4 space-y-1.5 text-xs text-muted-foreground">
               <div className="flex justify-between">
                 <dt>Gross floor area</dt>
@@ -189,6 +205,9 @@ export default async function BuildingDetailPage({
           )}
         </CardContent>
       </Card>
+
+      {/* Submit compliance documentation (cure axis) */}
+      <SubmitComplianceForm buildingId={building.id} />
 
       {/* Vault */}
       <div>

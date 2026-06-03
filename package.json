@@ -15,6 +15,7 @@
     "seed": "tsx scripts/seed.ts",
     "verify:rls": "tsx scripts/verify-rls.ts",
     "verify:storage": "tsx scripts/verify-storage.ts",
+    "verify:demo": "tsx scripts/verify-demo.ts",
     "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {

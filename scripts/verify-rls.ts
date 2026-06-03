@@ -94,10 +94,10 @@ async function main() {
   const { data: ownerBuildings } = await owner.from("buildings").select("id");
   check("Owner sees exactly 1 building", ownerBuildings?.length === 1, `saw ${ownerBuildings?.length}`);
 
-  // ── Property manager sees 12 ──
+  // ── Property manager sees the curated Sunset portfolio ──
   const pm = await asUser("manager@sunsetpm.test");
   const { data: pmBuildings } = await pm.from("buildings").select("id");
-  check("Property manager sees 12 buildings", pmBuildings?.length === 12, `saw ${pmBuildings?.length}`);
+  check("Property manager sees 10 buildings", pmBuildings?.length === 10, `saw ${pmBuildings?.length}`);
 
   console.log(failures === 0 ? "\nALL ISOLATION CHECKS PASSED" : `\n${failures} CHECK(S) FAILED`);
   process.exit(failures === 0 ? 0 : 1);

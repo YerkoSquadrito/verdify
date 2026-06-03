@@ -36,12 +36,36 @@ function countdownParts(ms: number) {
 export function FineExposureCounter({
   violationDateISO,
   size = "md",
+  settled = false,
+  settledAmount = 0,
+  offsetMs = 0,
 }: {
   violationDateISO: string | null;
   size?: "sm" | "md" | "lg";
+  /** Fine has been paid — show a static settled figure, no live escalation. */
+  settled?: boolean;
+  settledAmount?: number | null;
+  /** Demo-clock shift forward in ms (0 = real time). */
+  offsetMs?: number;
 }) {
-  const active = Boolean(violationDateISO);
-  const now = useNow(active);
+  const active = Boolean(violationDateISO) && !settled;
+  const now = useNow(active) + offsetMs;
+
+  if (settled) {
+    return (
+      <div>
+        <span
+          className={cn(
+            "tabular-nums font-semibold text-status-ok",
+            size === "lg" ? "text-3xl" : size === "sm" ? "text-base" : "text-2xl",
+          )}
+        >
+          {formatUsd(settledAmount ?? 0, { cents: true })}
+        </span>
+        <p className="mt-1 text-xs font-medium text-status-ok">Fine settled</p>
+      </div>
+    );
+  }
 
   if (!violationDateISO) {
     return (

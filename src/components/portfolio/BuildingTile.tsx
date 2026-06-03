@@ -69,6 +69,8 @@ export function BuildingTile({ view }: { view: BuildingView }) {
           <FineExposureCounter
             violationDateISO={violationDate ? violationDate.toISOString() : null}
             size="sm"
+            settled={view.fine.settled}
+            settledAmount={view.fine.settledAmount}
           />
         </div>
       </div>

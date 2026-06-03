@@ -3,6 +3,7 @@ import { Bell, Mail, MessageSquare, Monitor } from "lucide-react";
 import { getSessionContext } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { getPortfolio } from "@/lib/db/portfolio";
+import { getDemoNow, getDemoOffsetMs } from "@/lib/demo/clock-server";
 import { ALERT_THRESHOLDS_DAYS } from "@/lib/compliance";
 import type { AlertRow } from "@/lib/db/types";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -24,8 +25,10 @@ function dateKey(d: Date) {
 export default async function DeadlinesPage() {
   const ctx = await getSessionContext();
   const supabase = await createClient();
+  const asOf = await getDemoNow();
+  const offsetMs = await getDemoOffsetMs();
   const [portfolio, { data: alertRows }] = await Promise.all([
-    getPortfolio(supabase, ctx.activeOrg.id),
+    getPortfolio(supabase, ctx.activeOrg.id, asOf),
     supabase
       .from("alerts")
       .select("*")
@@ -97,7 +100,10 @@ export default async function DeadlinesPage() {
                     {formatDate(deadline.dueDate)}
                   </td>
                   <td className="px-4 py-3">
-                    <Countdown dueDateISO={deadline.dueDate.toISOString()} />
+                    <Countdown
+                      dueDateISO={deadline.dueDate.toISOString()}
+                      offsetMs={offsetMs}
+                    />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1.5">

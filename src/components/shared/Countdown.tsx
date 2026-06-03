@@ -15,13 +15,16 @@ function parts(ms: number) {
   };
 }
 
-/** Live countdown to a due date; turns amber inside 90 days, red inside 30. */
+/** Live countdown to a due date; turns amber inside 90 days, red inside 30.
+ *  `offsetMs` shifts "now" forward for the demo clock (0 = real time). */
 export function Countdown({
   dueDateISO,
   className,
+  offsetMs = 0,
 }: {
   dueDateISO: string;
   className?: string;
+  offsetMs?: number;
 }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -30,7 +33,7 @@ export function Countdown({
   }, []);
 
   const due = new Date(dueDateISO).getTime();
-  const p = parts(due - now);
+  const p = parts(due - (now + offsetMs));
   const days = p.past ? -p.d : p.d;
 
   const tone =
